@@ -104,7 +104,8 @@ export class HerdrError extends Error {
   declare readonly outcome?: string;
 
   constructor(code: string, message: string, fromReply = false, failedCall = false, outcome?: string) {
-    super(message);
+    const privateSocket = process.env["OVIS_AUTH_WORKER"] === "1" ? process.env["HERDR_SOCKET"] : undefined;
+    super(privateSocket ? message.replaceAll(privateSocket, "[Herdr socket]") : message);
     this.name = "HerdrError";
     this.code = code;
     Object.defineProperty(this, "fromReply", { value: fromReply, enumerable: false });

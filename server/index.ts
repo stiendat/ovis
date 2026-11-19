@@ -138,6 +138,8 @@ export interface ServerInstance {
 export function createServer(
   provided: {
     profile?: "machine";
+    /** Internal bridge in an OIDC worker. The main thread owns the listener. */
+    listenerless?: boolean;
     machineEngine?: string;
     machineRefusal?: () => string | null | Promise<string | null>;
     port?: number;
@@ -366,7 +368,7 @@ export function createServer(
   }
   // started after createCore's Node probe (server/pty/sidecar.ts), which can hold the thread up to 3 s: that wait
   // would count against the read's own 2.5 s limit, and a read cut short leaves the owner unknown for 5 minutes
-  identityOf(false, null);
+  if (!options.listenerless) void identityOf(false, null);
   const bridgeToken = options.bridgeToken ?? randomBytes(32).toString("hex");
   const piReader = new PiSessionReader({ deadlineMs: options.piSessionDeadlineMs });
 
@@ -391,7 +393,7 @@ export function createServer(
     peer: { kind: "socket" },
     services,
   });
-  const server = Bun.serve<SocketData>({
+  const server = options.listenerless ? null : Bun.serve<SocketData>({
     port: options.port ?? (envPort ? Number(envPort) : DEFAULT_PORT),
     hostname,
     maxRequestBodySize: BUN_BODY_CEILING,
@@ -400,8 +402,9 @@ export function createServer(
 
     websocket: core.websocket,
   });
+  const port = server?.port ?? options.port ?? DEFAULT_PORT;
   let ipv6: Bun.Server<SocketData> | null = null;
-  if (ipv6Loopback) {
+  if (server && ipv6Loopback) {
     try {
       ipv6 = Bun.serve<SocketData>({
         hostname: "::1", port: server.port, maxRequestBodySize: BUN_BODY_CEILING,
@@ -419,7 +422,7 @@ export function createServer(
   // root) can connect to. Bun gives a socket the umask's mode: it is made under 077, the owner's umask comes
   // back for everything made afterwards, and the file is 0600 before anything is served
   let ownerListener: Bun.Server<SocketData> | null = null;
-  if (options.profile === "machine") {
+  if (server && options.profile === "machine") {
     const path = ownerSocketPath(stateDir);
     const umask = process.umask(0o077);
     try {
@@ -452,7 +455,7 @@ export function createServer(
   });
   const services: RequestServices = {
     runtimeMove: options.runtimeService ? moveService({
-      stateDir, port: server.port ?? DEFAULT_PORT, serving: runtime, facts: () => options.runtimeService?.facts(),
+      stateDir, port, serving: runtime, facts: () => options.runtimeService?.facts(),
       lock: { path: moveLockPath(herdrSocketPath()) },
       stores: { codexHome: options.codexHome, opencodeDb: options.opencodeDb, hermesHome: options.hermesHome, piReader },
       holdsPending: core.holdsPending,
@@ -467,13 +470,15 @@ export function createServer(
     options, relay: ovisRelay, relayReceiptIds: new RelayReceiptIds(), hostname, token, bridgeToken, bootId, devices, accountMailbox, accountIntroductions: new AccountIntroductions(Date.now, join(stateDir, "account-introductions.json")), accountHolds, preferences, herdrSidebar, identityOf, serveOnly, portalGuards, shellAgents, agentDetector, agentOffered, agentInstaller, openCodeState, cliProxyRoutes, usageLogin, usage, usageAccounts, systemSampler, fontsDir: join(stateDir, "fonts"), voice, browserSnapshot, core, seen, piReader, orderSequence, clientConnectionLog, requestLog, portalStartup,
     get portalStartupResult() { return portalStartupResult; },
   };
-  ovisRelay.resume(services, server.port ?? DEFAULT_PORT);
-  accountMailbox.start();
+  if (server) {
+    ovisRelay.resume(services, port);
+    accountMailbox.start();
+  }
 
   // one listener per address on one port, all or none: a half-bound set would answer where nobody asked it to
   const lanListeners: Bun.Server<SocketData>[] = [];
   let lanHttps: ServerInstance["lanHttps"] = null;
-  if (options.lanHttps) {
+  if (server && options.lanHttps) {
     const config = options.lanHttps;
     try {
       const addresses = config.host !== undefined ? [config.host] : privateLanAddresses();
@@ -504,7 +509,7 @@ export function createServer(
     options.portal.authorize(portalGuards);
     let resume: Promise<void>;
     try {
-      resume = options.portal.resume({ port: server.port ?? DEFAULT_PORT, ...portalGuards() });
+      resume = options.portal.resume({ port, ...portalGuards() });
     } catch (error) {
       resume = Promise.reject(error);
     }
@@ -518,8 +523,8 @@ export function createServer(
 
   // the app's SSH tunnel reaches a bridge on the PC's 127.0.0.1 only (#1960)
   const target = options.registerBridge ? relayTarget(hostname) : null;
-  const relay = target ? loopbackRelay(target, server.port ?? 0) : null;
-  const registration = options.registerBridge ? registerBridge(relay?.port ?? server.port ?? 0, bridgeToken) : null;
+  const relay = target ? loopbackRelay(target, port) : null;
+  const registration = options.registerBridge ? registerBridge(relay?.port ?? port, bridgeToken) : null;
 
   const releaseOpenCodeNative = holdOpenCodeNative();
   const releaseFilePool = holdFilePool();
@@ -527,8 +532,8 @@ export function createServer(
   core.start();
 
   return {
-    context: socketContext(server),
-    port: server.port ?? 0,
+    context: server ? socketContext(server) : { port, peer: { kind: "socket" }, services, requestIP: () => null, timeout: () => {}, upgrade: () => false },
+    port,
     hostname,
     lanHttps,
     statusReady: Promise.all([collector.ready, collector.structureReady]).then(() => undefined),
@@ -559,7 +564,7 @@ export function createServer(
       void usageLogin.stopAll();
       void shellAgents.stop();
       agentDetector.close();
-      server.stop(true);
+      server?.stop(true);
       ipv6?.stop(true);
       ownerListener?.stop(true);
       for (const listener of lanListeners) listener.stop(true);
@@ -571,6 +576,11 @@ export function createServer(
 }
 
 export async function serve(): Promise<void> {
+  if (process.env["OVIS_AUTH"] === "oidc" || process.env["OIDC_ISSUER_URL"] !== undefined) {
+    await (await import("./oidc/application.ts")).serveOidc();
+    return;
+  }
+  if (process.env["OVIS_AUTH"]) throw new Error("Unsupported OVIS_AUTH value");
   const profile = process.env["OVIS_PROFILE"] === "machine";
   if (profile && !fleetPreview()) {
     console.error("The machine profile is a preview and was not started; set OVIS_PREVIEW=fleet beside OVIS_PROFILE=machine to start it.");

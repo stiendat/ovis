@@ -25,6 +25,7 @@ export const DEVICES_JA: Record<string, string> = {
   "Have an access token instead?": "アクセストークンをお持ちですか?",
   "Unlocking…": "ロックを解除しています…",
   "Unlock": "ロック解除",
+  "You signed in with Pocket ID.": "Pocket ID でサインインしています。",
   "You are on the PC itself.": "PC 本体からアクセスしています。",
   "You are in as this PC's Tailscale login.": "この PC の Tailscale ログインでアクセスしています。",
   "This is a paired device.": "ペアリング済みのデバイスです。",

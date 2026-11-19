@@ -1,0 +1,11 @@
+# For a direct HTTPS Caddy deployment. With Cloudflare Tunnel, use the
+# hostname and loopback origin documented in docs/oidc-deployment.md.
+dev-ovis.datbt.dev {
+	reverse_proxy 127.0.0.1:7318 {
+		header_up Host dev-ovis.datbt.dev
+		header_up X-Forwarded-Proto https
+		header_up -Authorization
+		header_up -Tailscale-User-Login
+		flush_interval -1
+	}
+}

@@ -74,6 +74,7 @@ async function fileFor(path) {
  * page asks again must not leave a shell without them.
  */
 async function keepShell(response, spare) {
+  if (/\bno-store\b/i.test(response.headers.get("cache-control") || "")) return;
   const html = await response.clone().text();
   const cache = await caches.open(CACHE);
   for (const path of shellFiles(html)) {
@@ -236,7 +237,7 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/") || url.pathname === "/ws") return;
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/") || url.pathname === "/ws") return;
 
   if (RELAY_RESOURCES) {
     const scope = new URL(self.registration.scope).pathname;

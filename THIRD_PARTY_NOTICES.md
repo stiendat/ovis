@@ -25,6 +25,12 @@ The MIT license text below applies, with these copyright notices:
 It also bundles `tweetnacl` 1.0.3, which its authors released into the public domain (the
 Unlicense).
 
+## OpenID Connect
+
+The server bundles `openid-client` 6.8.8 (Copyright (c) 2016 Filip Skokan)
+and `oauth4webapi` 3.8.8 (Copyright (c) 2022 Filip Skokan). The MIT license
+text below applies to both packages.
+
 ## QR Code generator
 
 `app/windows/src/QrCode.cs` ports the byte-mode encoder from

@@ -1,0 +1,7 @@
+# Add this hostname to the existing tunnel configuration before its catch-all.
+# For a remotely managed tunnel configure the equivalent Public Hostname.
+ingress:
+  - hostname: dev-ovis.datbt.dev
+    service: http://127.0.0.1:7318
+    originRequest:
+      httpHostHeader: dev-ovis.datbt.dev

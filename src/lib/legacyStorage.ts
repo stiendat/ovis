@@ -8,6 +8,13 @@
 const LEGACY_PREFIX = "herdr-web-ui:";
 const PREFIX = "ovis:";
 
+export function clearOvisStorage(storage: Storage): void {
+  for (let index = storage.length - 1; index >= 0; index--) {
+    const key = storage.key(index);
+    if (key?.startsWith(PREFIX) || key?.startsWith(LEGACY_PREFIX)) storage.removeItem(key);
+  }
+}
+
 export function adoptLegacyStorage(storage: Storage): void {
   const legacy: string[] = [];
   for (let index = 0; index < storage.length; index++) {
@@ -36,4 +43,4 @@ export function adoptLegacyStores(stores: { localStorage: Storage | null; sessio
   }
 }
 
-adoptLegacyStores(window);
+if (typeof window !== "undefined") adoptLegacyStores(window);

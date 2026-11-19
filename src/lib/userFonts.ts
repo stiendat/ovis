@@ -1,6 +1,7 @@
 import { USER_FONTS_PATH, type UserFont, type UserFontList } from "../../shared/user-fonts.ts";
 import { apiFetch } from "./api-request-id.ts";
 import { faceArrived } from "./fontFaces.ts";
+import { oidcPage } from "./oidcPage.ts";
 import { sanitizeFontFamily } from "./fontFamily.ts";
 import { serverIdOfPath, serverScopePath } from "./shellMode.ts";
 
@@ -30,7 +31,7 @@ async function bytesOf(font: UserFont): Promise<ArrayBuffer> {
   const serverId = typeof location === "undefined" ? null : serverIdOfPath(location.pathname);
   const keptPath = serverId === null ? path : `${serverScopePath(serverId).slice(0, -1)}${path}`;
   const keptUrl = `${keptPath}?v=${encodeURIComponent(font.version)}`;
-  const cache = typeof caches === "undefined" ? null : await caches.open(CACHE).catch(() => null);
+  const cache = oidcPage !== null || typeof caches === "undefined" ? null : await caches.open(CACHE).catch(() => null);
   const kept = await cache?.match(keptUrl).catch(() => undefined);
   if (kept) return kept.arrayBuffer();
   const response = await apiFetch(url, { signal: AbortSignal.timeout(FILE_TIMEOUT_MS) });

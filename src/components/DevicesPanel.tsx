@@ -41,6 +41,7 @@ export interface DevicesPanelProps {
 
 export const VIA: Record<NonNullable<HealthAuth["via"]>, string> = {
   local: "You are on the PC itself.",
+  oidc: "You signed in with Pocket ID.",
   tailscale: "You are in as this PC's Tailscale login.",
   device: "This is a paired device.",
   relay: "This is a paired device, reaching the PC through the Ovis relay.",

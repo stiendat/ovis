@@ -1,0 +1,19 @@
+[Unit]
+Description=Ovis Development with Pocket ID
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/ovis-dev/current
+EnvironmentFile=%h/.config/ovis-dev/production.env
+Environment=PATH=%h/.local/bin:%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/ovis-dev/bin/bun ./server/index.ts
+Restart=on-failure
+RestartSec=3s
+UMask=0077
+# Herdr owns the agents and continues across Ovis stops and upgrades.
+KillMode=process
+TimeoutStopSec=15s
+
+[Install]
+WantedBy=default.target

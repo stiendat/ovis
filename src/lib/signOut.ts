@@ -1,3 +1,4 @@
+import { setOidcSigningOut, signedOutOfOidc } from "./oidcPage.ts";
 import type { HealthAuth } from "../../shared/protocol.ts";
 import { fetchBridgeHealth, signOut, signOutOfPortal } from "./api.ts";
 
@@ -9,7 +10,7 @@ import { fetchBridgeHealth, signOut, signOutOfPortal } from "./api.ts";
  */
 export function canSignOut(auth: HealthAuth | null): boolean {
   if (auth?.authenticated !== true) return false;
-  return auth.via === "device" || auth.via === "portal" || (auth.via === "token" && auth.bearer !== true);
+  return auth.via === "oidc" || auth.via === "device" || auth.via === "portal" || (auth.via === "token" && auth.bearer !== true);
 }
 
 /**
@@ -21,6 +22,13 @@ export function canSignOut(auth: HealthAuth | null): boolean {
  * from the bridge's health, which answers while herdr is down, as signing out must.
  */
 export async function endSignIn(via: HealthAuth["via"]): Promise<{ reload: boolean }> {
+  if (via === "oidc") {
+    setOidcSigningOut(true);
+    try { await signOut(); }
+    finally { setOidcSigningOut(false); }
+    signedOutOfOidc();
+    return { reload: false };
+  }
   if (via !== "portal") {
     await signOut();
     if ((await fetchBridgeHealth()).auth.via !== "portal") return { reload: false };

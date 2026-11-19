@@ -130,6 +130,8 @@ export interface ServerContext {
   /** `serverId`: the relay identity the device signed in to, which a `link` must name (docs/account.md). */
   readonly peer: { kind: "socket" } | { kind: "relay"; device: DeviceMatch; sessionId: string; serverId: string; key: string };
   readonly services: RequestServices;
+  /** Set by the authenticated worker transport. */
+  readonly oidc?: true;
   readonly relayBodyBudget?: EventStreamBudget;
   /**
    * The request came in on the machine profile's owner socket (`<state folder>/serve.sock`): set by the
@@ -162,7 +164,7 @@ export async function handleRequest(request: Request, ctx: ServerContext): Promi
   const relayPeer = ctx.peer.kind === "relay" ? ctx.peer.device : undefined;
   // the machine profile on TCP: its liveness for every caller; no credential or header of the request is read
   if (options.profile === "machine" && relayPeer === undefined && ctx.ownerSocket !== true) return machineTcpAnswer(request, pathname);
-  const bridgeAuthorized = options.profile !== "machine" && relayPeer === undefined && ctx.lanHttps !== true && isAuthenticated(request, bridgeToken);
+  const bridgeAuthorized = !ctx.oidc && options.profile !== "machine" && relayPeer === undefined && ctx.lanHttps !== true && isAuthenticated(request, bridgeToken);
   // the connection server that reaches this one as its PC reads its update status and asks for the
   // update on offer: an Ovis run on this PC by itself is updated through its own updater, never
   // replaced (server/machines.ts ownOffer). An install still names the offered revision and the
@@ -200,14 +202,14 @@ export async function handleRequest(request: Request, ctx: ServerContext): Promi
   }
   const requestShape = { loopback, forwarded, funnel, tailscaleLogin, forwardedFor, serveOnly };
   const apiPath = pathname === "/ws" || pathname.startsWith("/api/");
-  const identity = relayPeer === undefined
+  const identity = !ctx.oidc && relayPeer === undefined
     ? await identityOf(token === "" && pairedDevice === null && isServeOwnerRequest(requestShape) && apiPath, requestHost,
       // only the shape decideAccess could let in by login: from loopback, one tailnet address, not Funnel
       token === "" && pairedDevice === null && loopback && tailscaleLogin !== null && !funnel && inTailnet(forwardedFor) && apiPath)
     : { owner: null, tagged: false, soleLogin: null, dnsName: null, tailnetIp: null };
   // Portal reaches this server over loopback, never the LAN listener: its proof is not a way in there
   const portalProven = relayPeer === undefined && ctx.lanHttps !== true && (options.portal?.vouches(request.headers.get("x-portal-proof") ?? null) ?? false);
-  const access = options.profile === "machine" ? decideMachineAccess({ relayPeer, ownerSocket: ctx.ownerSocket === true, host: requestHost, forwarded: machineForwardingHeaders(request.headers) }) : decideAccess({
+  const access = ctx.oidc ? { level: "full", via: "oidc", role: "drive", login: undefined, device: undefined, portal: undefined } as const : options.profile === "machine" ? decideMachineAccess({ relayPeer, ownerSocket: ctx.ownerSocket === true, host: requestHost, forwarded: machineForwardingHeaders(request.headers) }) : decideAccess({
     relayPeer,
     ...requestShape,
     host: requestHost,

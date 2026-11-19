@@ -25,6 +25,7 @@ export const DEVICES_KO: Record<string, string> = {
   "Have an access token instead?": "접속 토큰이 있나요?",
   "Unlocking…": "잠금 해제 중…",
   "Unlock": "잠금 해제",
+  "You signed in with Pocket ID.": "Pocket ID로 로그인했습니다.",
   "You are on the PC itself.": "지금 PC 자체에서 보고 있습니다.",
   "You are in as this PC's Tailscale login.": "이 PC의 Tailscale 로그인으로 접속했습니다.",
   "This is a paired device.": "페어링된 기기입니다.",

@@ -1,3 +1,4 @@
+import { leaveOidcPage, oidcPage, oidcResource } from "./oidcPage.ts";
 
 export interface WebSocketLike {
   readonly CONNECTING: 0;
@@ -45,9 +46,19 @@ function nativeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Resp
   const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
   const origin = typeof location === "undefined" ? "http://localhost" : location.origin;
   const target = new URL(input instanceof Request ? input.url : String(input), origin);
+  const ownApi = target.origin === origin && target.pathname.startsWith("/api/");
+  const browserFetch = (options?: RequestInit) => {
+    if (oidcPage === null || !ownApi) return fetch(input, options);
+    const headers = new Headers(options?.headers ?? (input instanceof Request ? input.headers : undefined));
+    headers.set("x-ovis-page", oidcPage);
+    return fetch(input, { ...options, headers }).then((response) => {
+      if (response.status === 401) leaveOidcPage();
+      return response;
+    });
+  };
   // only this server's reads: a write is never given up for the caller (the server may have done it),
   // and another host's connections were not found dead
-  if ((method !== "GET" && method !== "HEAD") || target.origin !== origin || !target.pathname.startsWith("/api/")) return fetch(input, init);
+  if ((method !== "GET" && method !== "HEAD") || !ownApi) return browserFetch(init);
   const own = init?.signal ?? (input instanceof Request ? input.signal : undefined);
   const read = new AbortController();
   let signal = read.signal;
@@ -55,7 +66,7 @@ function nativeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Resp
   else if (own?.aborted) read.abort(own.reason);
   else own?.addEventListener("abort", () => read.abort(own.reason), { once: true });
   nativeReads.set(read, readMachine(target.pathname));
-  return fetch(input, { ...init, signal }).finally(() => { nativeReads.delete(read); });
+  return browserFetch({ ...init, signal }).finally(() => { nativeReads.delete(read); });
 }
 
 /**
@@ -77,9 +88,13 @@ export function abandonNativeReads(machineId = "local"): void {
 export const nativeTransport: Transport = {
   kind: "native",
   fetch: nativeFetch,
-  openSocket: (url) => new WebSocket(url),
-  openEventSource: (url) => new EventSource(url),
-  resourceUrl: (path) => path,
+  openSocket: (url) => {
+    const socket = new WebSocket(oidcResource(url));
+    if (oidcPage !== null) socket.addEventListener("close", (event) => { if (event.code === 4401) leaveOidcPage(); });
+    return socket;
+  },
+  openEventSource: (url) => new EventSource(oidcResource(url)),
+  resourceUrl: oidcResource,
 };
 
 let current: Transport = nativeTransport;

@@ -25,6 +25,7 @@ export const DEVICES_ZH: Record<string, string> = {
   "Have an access token instead?": "有访问 Token？",
   "Unlocking…": "正在解锁…",
   "Unlock": "解锁",
+  "You signed in with Pocket ID.": "你已通过 Pocket ID 登录。",
   "You are on the PC itself.": "你正在 PC 本机上访问。",
   "You are in as this PC's Tailscale login.": "你已通过此 PC 的 Tailscale 登录身份访问。",
   "This is a paired device.": "这是已配对的设备。",
