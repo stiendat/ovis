@@ -1,5 +1,5 @@
 import { type CSSProperties, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, ChevronDown, ChevronLeft, Eye, Plus, CircleHelp, Ellipsis, FolderOpen, Inbox, Link, Menu, MessageCircle, MessageSquare, PanelLeft, PanelsTopLeft, Search, Settings as SettingsGlyph, SquareTerminal, Target, TextSearch, X } from "lucide-react";
+import { Bell, ChevronDown, ChevronLeft, Eye, Plus, CircleHelp, Ellipsis, ExternalLink, FolderOpen, Inbox, Link, Menu, MessageCircle, MessageSquare, PanelLeft, PanelsTopLeft, Search, Settings as SettingsGlyph, SquareTerminal, Target, TextSearch, X } from "lucide-react";
 
 import type { HerdrPane, PaneDirection } from "../shared/protocol.ts";
 import { authenticate, createTab, movePaneBeside, moveTabToWorkspace, paneSessionKey, shareSeen, swapPaneWith } from "./lib/api.ts";
@@ -57,6 +57,8 @@ import { RowMenu, type RowMenuItem } from "./components/RowMenu.tsx";
 import { headerCrumb, showsChat } from "./lib/headerCrumb.ts";
 import { LOCAL_MACHINE, pairedPc, paneStorageId } from "../shared/machines.ts";
 import { inNativeApp } from "./lib/nativeApp.ts";
+import { openExternal } from "./lib/externalLink.ts";
+import { vscodeWorkspaceUrl } from "./lib/vscodeWorkspace.ts";
 import { serverIdOfPath, shellMode } from "./lib/shellMode.ts";
 import { usePairedNotices } from "./lib/usePairedNotices.ts";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
@@ -758,6 +760,9 @@ export function App() {
   usePhoneSheetBack(() => setDrawerOpen(false), drawerModal, true);
   const { tabsInHeader, sheet: tabSheet, toggle: toggleTabSheet, close: closeTabSheet } = useTabSheet(selectedPane !== null && !guideShown && !inbox.shown && !inMode ? JSON.stringify([selectedMachineId, selectedPane.workspace_id]) : null);
   const cramped = useMediaQuery(CRAMPED_QUERY);
+  const editorUrl = selectedMachineId === LOCAL_MACHINE && auth?.role !== "watch"
+    ? vscodeWorkspaceUrl(import.meta.env.VITE_OVIS_VSCODE_URL, selectedWorkspace?.worktree?.checkout_path ?? selectedPane?.cwd)
+    : null;
   const paneMenuInMore = selectedPane !== null
     && tabRowHidden(cramped, snapshot?.tabs.filter((tab) => tab.workspace_id === selectedPane.workspace_id).length ?? 0, tabsInHeader || inMode);
   const inboxWide = inMode && wideScreen;
@@ -789,6 +794,7 @@ export function App() {
     { id: "palette", label: t("Search panes and actions"), icon: Search, ...(paletteKeys ? { hint: paletteKeys } : {}), run: () => openPalette() },
     ...(foldFind && more ? [{ id: "find-group", label: t("Find…"), icon: TextSearch, run: () => openMoreGroup("find", more.anchor) }] : findInTerminal),
     ...(selectedPane && (!wideScreen || inMode) ? [{ id: "files", label: t("Browse files"), icon: FolderOpen, run: moreFilesRun(actions.counted, () => setFilesOpen(true)) }] : []),
+    ...(editorUrl !== null && (!wideScreen || inMode) ? [{ id: "open-vscode", label: t("Open in VS Code"), icon: ExternalLink, run: () => openExternal(editorUrl, "link") }] : []),
     { id: "copy-link", label: t("Copy link"), icon: Link, run: () => void copyText(window.location.href).then((ok) => { if (ok) setHeaderNote("copied"); }) },
     { id: "alerts", label: t("Alerts"), hint: bell.state, checked: bell.on, title: bell.title, icon: Bell, run: () => void bell.run() },
     ...paneMoreItems.filter((item) => !(foldFind && item.id === "search-conversation") && (!foldPane || item.id.startsWith("pane:")))
@@ -801,7 +807,7 @@ export function App() {
   const modeThreadItems: RowMenuItem[] = [
     ...(inboxWide ? [] : fromMore("next-waiting")), ...fromMore("find-group"), ...fromMore("find"),
     ...(foldFind ? [] : paneMoreItems.filter((item) => item.id === "search-conversation")),
-    ...fromMore("files"), ...fromMore("copy-link"),
+    ...fromMore("files"), ...fromMore("open-vscode"), ...fromMore("copy-link"),
     ...paneMoreItems.filter((item) => item.id === "mirror-width" || item.id === "recover-unsent"),
   ].map((item) => ({ ...item, divider: false }));
   const modeLeadItems: RowMenuItem[] = [
@@ -1048,6 +1054,12 @@ export function App() {
         {selectedPane && wideScreen && !inMode && (
           <button type="button" className="header-text-button header-files-button is-icon" aria-label={t("Browse files")} title={t("Files")} aria-pressed={filesDocked ? filesBeside : undefined} onClick={toggleFiles}>
             <FolderOpen aria-hidden="true" />
+          </button>
+        )}
+        {editorUrl !== null && wideScreen && !inMode && !guideShown && (
+          <button type="button" className="header-text-button" onClick={() => openExternal(editorUrl, "link")}>
+            <ExternalLink aria-hidden="true" />
+            {t("Open in VS Code")}
           </button>
         )}
         <div className="header-meta">

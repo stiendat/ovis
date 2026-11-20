@@ -12,7 +12,6 @@ export const SIDEBAR_KO: Record<string, string> = {
   "Mute alerts": "알림 끄기",
   "Unmute alerts": "알림 켜기",
   "Alerts muted": "알림 꺼짐",
-  "Open in VS Code": "VS Code에서 열기",
   "Pin workspace": "워크스페이스 고정",
   "Unpin workspace": "워크스페이스 고정 해제",
   "Pinned": "고정됨",

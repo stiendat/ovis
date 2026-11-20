@@ -615,6 +615,7 @@ const BASE: Record<string, string> = {
   "From every workspace.": "모든 워크스페이스에서 모아요.",
   "Pick a folder to start in.": "시작할 폴더를 골라요.",
   "Show QR code": "QR 코드 보기",
+  "Open in VS Code": "VS Code에서 열기",
 };
 
 export const KO_PARTS: Record<string, Record<string, string>> = {

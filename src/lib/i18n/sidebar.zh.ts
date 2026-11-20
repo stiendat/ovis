@@ -12,7 +12,6 @@ export const SIDEBAR_ZH: Record<string, string> = {
   "Mute alerts": "静音提醒",
   "Unmute alerts": "取消静音提醒",
   "Alerts muted": "提醒已静音",
-  "Open in VS Code": "在 VS Code 中打开",
   "Pin workspace": "固定工作区",
   "Unpin workspace": "取消固定工作区",
   "Pinned": "已固定",
