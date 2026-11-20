@@ -617,6 +617,7 @@ const BASE: Record<string, string> = {
   "From every workspace.": "すべてのワークスペースから。",
   "Pick a folder to start in.": "始めるフォルダーを選びます。",
   "Show QR code": "QR コードを表示",
+  "Open in VS Code": "VS Code で開く",
 };
 
 export const JA_PARTS: Record<string, Record<string, string>> = {

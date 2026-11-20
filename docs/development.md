@@ -153,6 +153,14 @@ reduction. Compare the same pages, conversation sizes and activity before claimi
 particular, the conversation cache's byte budget is an upper bound on retained serialized answers,
 not a measurement of a tab's resident memory or its parsed objects and rendered nodes.
 
+## Open workspaces in a browser editor
+
+Build with `VITE_OVIS_VSCODE_URL=https://editor.example.com/` to offer **Open in VS Code**
+beside Files on desktop, under **More** on a phone, and in the workspace menu for this PC. Use the HTTPS base URL of a browser editor such as
+code-server, with no credentials, query or fragment. The editor must be reachable from the
+browser and see the same absolute workspace paths as herdr. Ovis opens a new tab with the
+folder in the URL. The editor handles its own sign-in.
+
 ## Checks
 
 Production builds create Brotli (`.br`) and gzip (`.gz`) sidecars for JavaScript and CSS under
