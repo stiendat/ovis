@@ -12,6 +12,7 @@ export const SIDEBAR_JA: Record<string, string> = {
   "Mute alerts": "通知をミュート",
   "Unmute alerts": "通知のミュートを解除",
   "Alerts muted": "通知ミュート中",
+  "Open in VS Code": "VS Code で開く",
   "Pin workspace": "ワークスペースを固定",
   "Unpin workspace": "ワークスペースの固定を解除",
   "Pinned": "固定済み",

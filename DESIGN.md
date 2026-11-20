@@ -1548,6 +1548,9 @@ Alert rows of the table above from the `--droplet-*` roles in `src/styles.css`.
   rather than another app's policy; at `<=480px` both go with the other header pills.
 
 ### Sidebar roster row and footer
+- **Open in VS Code** appears in the workspace menu when this PC has a configured editor. It follows
+  Zed's remote development workflow of opening the workspace folder in the editor, using the worktree
+  checkout when available. The external-link icon marks that it opens in a new browser tab.
 - No top bar. The sidebar opens with the plan panel (when Settings puts it there), the PC workspace groups and a separate **Agents** list spanning the connected PCs. A workspace starts from the `+` on its PC's header (the lone Host's **New workspace** row, below), from the `+` beside the logo that a desktop's One line rows draw for the selected PC, or from the **New workspace**
   button in the dashed **No workspaces yet** box of an empty PC. **Add PC** lives in Settings →
   Remote PCs and in the command palette. Search, as in finding anything and acting on it (panes by

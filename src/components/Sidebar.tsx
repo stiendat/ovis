@@ -1,12 +1,15 @@
 import { tally, usageCounters } from "../lib/usageCounters.ts";
 import { Fragment, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type AnimationEvent, type DragEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { Bot, ChevronDown, ChevronRight, Ellipsis, Folder, FolderOpen, GitBranch, History, Layers, ListChecks, Pencil, Pin, PinOff, Plus, Terminal, Trash2, TriangleAlert, X } from "lucide-react";
+import { Bot, ChevronDown, ChevronRight, Ellipsis, ExternalLink, Folder, FolderOpen, GitBranch, History, Layers, ListChecks, Pencil, Pin, PinOff, Plus, Terminal, Trash2, TriangleAlert, X } from "lucide-react";
 
 import "./Sidebar.css";
 
 import type { AgentStatus, PaneContext, PaneInfo, PlanSummary, SessionSnapshot, WorkspaceInfo } from "../../shared/protocol.ts";
 import { paneTitle } from "../../shared/notify-policy.ts";
 import { MAX_LABEL_CHARS } from "../../shared/labels.ts";
+import { LOCAL_MACHINE } from "../../shared/machines.ts";
+import { openExternal } from "../lib/externalLink.ts";
+import { vscodeWorkspaceUrl } from "../lib/vscodeWorkspace.ts";
 import { renamesWorkspace } from "../lib/layoutTargets.ts";
 import { useAppLayout, useMachineApi, useMachineId, useReorderCoordinator } from "../lib/machineContext.tsx";
 import { PanePressContext } from "../lib/paneSubmitContext.ts";
@@ -486,6 +489,10 @@ export function Sidebar({ snapshot, online, selectedPaneId, actions, watching = 
     const workspace = snapshot?.workspaces.find((candidate) => candidate.workspace_id === state.workspace.workspace_id) ?? state.workspace;
     const panes = snapshot?.panes.filter((pane) => pane.workspace_id === workspace.workspace_id) ?? [];
     const paneCount = Math.max(1, panes.length);
+    const folder = workspace.worktree?.checkout_path ?? (panes.length > 0 ? currentPane(workspace, panes).cwd : null);
+    const editor = online && !watching && machineId === LOCAL_MACHINE
+      ? vscodeWorkspaceUrl(import.meta.env.VITE_OVIS_VSCODE_URL, folder)
+      : null;
     // a worktree workspace: its checkout can be deleted; the repository's workspace: herdr closes
     // every workspace of the repository with it (any other one on the main checkout too, whatever
     // group it shows under here), and refuses without close_group
@@ -544,6 +551,7 @@ export function Sidebar({ snapshot, online, selectedPaneId, actions, watching = 
       ...(!renameOffered || !renamesWorkspace(workspace.workspace_id) ? [] : [{ id: "rename-workspace", label: t("Rename workspace"), icon: Pencil, run: () => beginWorkspaceRename(workspace) }]),
       ...(historyOffered && !watching ? [{ id: "session-history", label: t("Earlier sessions…"), icon: History, run: () => actions.openSessionHistory({ machineId, workspaceId: workspace.workspace_id, agent: (panes.length > 0 ? currentPane(workspace, panes) : null)?.agent ?? null }) }] : []),
       ...(holdsLock(closes) ? [] : [{ ...closeItem, label: t(sameRepo.length > 0 ? "Close group" : "Close workspace"), divider: false }]),
+      ...(editor === null ? [] : [{ id: "open-vscode", label: t("Open in VS Code"), icon: ExternalLink, run: () => openExternal(editor, "link") }]),
       ...worktreeItems, ...deleteItems,
       ...(worktrees.length > 0 && repoKey ? [{ id: "fold", label: t(folded ? "Expand" : "Collapse"), icon: folded ? ChevronRight : ChevronDown, run: () => toggleWorktrees(repoKey, folded) }] : []),
       ...(!(worktrees.length > 0 && repoKey) && ownAgents.length > 0 ? [{ id: "fold", label: t(agentsAway ? "Expand" : "Collapse"), icon: agentsAway ? ChevronRight : ChevronDown, run: () => toggleAgents(workspace.workspace_id, agentsAway) }] : []),
